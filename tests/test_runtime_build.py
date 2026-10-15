@@ -1,4 +1,5 @@
 """Build tests use local Git fixtures, synthetic ELF and mocked tool output; no compilation."""
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -18,6 +19,13 @@ from thorfg.paths import ThorError
 
 
 class BuilderTests(Base):
+    def setUp(self):
+        super().setUp()
+        # Захватываем сообщения synthetic build, не выдаём их за реальную сборку.
+        output = patch("sys.stdout", new_callable=io.StringIO)
+        self.output = output.start()
+        self.addCleanup(output.stop)
+
     def source(self):
         return load_source(ROOT, "historical")
 

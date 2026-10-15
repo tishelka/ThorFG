@@ -50,6 +50,9 @@ probe от site-packages и разбор PowerShell helper.
 `--help` через CP1252. Прочитан traceback UnicodeEncodeError; CLI теперь явно выводит
 UTF-8, и добавлен subprocess regression с PYTHONIOENCODING=cp1252/PYTHONUTF8=0.
 Проверки не отключались. Окончательный результат повторного запуска указан ниже.
+В тестах захвачен stdout mock builder/update: их синтетические «сборка/stash» не
+печатаются как реальные результаты и не зависят от кодировки test runner.
+Полные 100 тестов дополнительно проверены локально с принудительным CP1252.
 
 ## Исправление HOME/XDG и CI — 2026-10-15
 

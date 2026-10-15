@@ -1,3 +1,4 @@
+import io
 import json
 import subprocess
 from unittest.mock import patch
@@ -7,6 +8,12 @@ from scripts.safe_update import backup, safe, update, REPOSITORY
 
 
 class SafeUpdateTests(Base):
+    def setUp(self):
+        super().setUp()
+        output = patch("sys.stdout", new_callable=io.StringIO)
+        self.output = output.start()
+        self.addCleanup(output.stop)
+
     def test_backup_preserves_local_runtime_edits_and_build_result(self):
         repo = self.home / "thorfg"
         self.put(repo / "runtime/build.py", "local build recipe")
