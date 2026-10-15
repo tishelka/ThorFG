@@ -19,6 +19,9 @@
   библиотека и общий TOML остались байт-в-байт без изменений.
 * Архив исходников проверен на новые helper/docs и отсутствие .git/.build/.research/
   .venv/node_modules. Готовые пакеты — локальные artifacts, не native runtime release.
+* Дополнительно выполнено обновление настоящего временного Git checkout с локальным
+  bare remote вместо сети: ручные build.py/lock сохранены в backup и Git stash,
+  исходная ветка сохранила HEAD, новая получила target, ignored build остался целым.
 
 Новые тесты покрывают trusted mirror/pin/tree, реальные временные Git checkout,
 dirty/untracked source, LLVM tools и flags, отказ при плохом cache, восстановление
@@ -53,6 +56,18 @@ UTF-8, и добавлен subprocess regression с PYTHONIOENCODING=cp1252/PYTH
 В тестах захвачен stdout mock builder/update: их синтетические «сборка/stash» не
 печатаются как реальные результаты и не зависят от кодировки test runner.
 Полные 100 тестов дополнительно проверены локально с принудительным CP1252.
+
+[Успешный запуск 38773714613](https://github.com/tishelka/ThorFG/actions/runs/38773714613)
+проверяет commit **e0f264d4fa62456b97a0ae5028fda20a0e0b196e**, [PR №2](https://github.com/tishelka/ThorFG/pull/2).
+Получены завершённые jobs и прочитаны backend логи:
+
+| Job | Результат |
+|---|---|
+| backend (ubuntu-latest) | SUCCESS, 100/100 без пропусков; отдельный HOME/XDG RPC и bash -n прошли |
+| backend (windows-latest) | SUCCESS, 100/100 без пропусков; отдельный HOME/XDG RPC и PowerShell 5.1 parser прошли |
+| frontend | SUCCESS, typecheck/build/test:bundle/ZIP/artifact |
+
+Это CI на x64 runner и mocks, а не native ARM64 build или тест Thor.
 
 ## Исправление HOME/XDG и CI — 2026-10-15
 

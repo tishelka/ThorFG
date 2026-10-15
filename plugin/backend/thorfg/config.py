@@ -5,10 +5,10 @@ import tomllib
 import tomlkit
 
 from .paths import ThorError
+from .bundle import SLOT
 
 
 PREFIX = "ThorFG:"
-from .bundle import SLOT
 
 
 def defaults():

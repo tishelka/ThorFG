@@ -64,12 +64,14 @@ function Content() {
     {row(t("slotInstalled"), t(lifecycle?.slot_installed ? "found" : "absent"))}
     {row(t("activated"), t(lifecycle?.runtime_activated ? "found" : "absent"))}
     {row(t("arch"), lifecycle?.native_runtime?.architecture ?? t("unknown"))}
+    {row(t("elfVerified"), evidence(lifecycle?.native_runtime?.elf_verified))}
     {row(t("externalManagers"), lifecycle?.external_managers.join(", ") || t("absent"))}
     {row(t("externalLayers"), lifecycle?.external_layers.map(layer => layer.architecture).join(" / ") || t("absent"))}
-    {row(t("coexistence"), lifecycle?.read_only ? t("readOnly") : t("writable"))}
+    {row(t("coexistence"), lifecycle ? t(lifecycle.read_only ? "readOnly" : "noExternal") : t("unknown"))}
     {!canConfigure && <PanelSectionRow><Field label={t("blocked")}
       description={lifecycle?.profile_write_block_reasons.join(". ")} /></PanelSectionRow>}
     {row(t("hostLoaded"), evidence(probe?.host_load_verified))}
+    {row(t("layerDiscovered"), evidence(probe?.layer_discovered))}
     {row(t("layerInserted"), evidence(probe?.layer_inserted))}
     {row(t("runtimeInit"), evidence(probe?.runtime_initialized))}
     <PanelSectionRow><Field description={t("gamePending")} /></PanelSectionRow>
