@@ -1,0 +1,14 @@
+# Пример только для исторического адаптера, не копируйте поверх своего conf.toml.
+version = 2
+
+[global]
+allow_fp16 = true
+# dll = '/абсолютный/путь/Lossless Scaling/Lossless.dll'
+
+[[profile]]
+name = 'Пример игры'
+active_in = ['ActualGame.exe']
+multiplier = 2
+flow_scale = 0.5
+performance_mode = true
+pacing = 'none'

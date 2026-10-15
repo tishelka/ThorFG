@@ -1,0 +1,11 @@
+.research/
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+plugin/dist/
+plugin/py_modules/
+artifacts/
+.build/
+*.egg-info/
+*.log

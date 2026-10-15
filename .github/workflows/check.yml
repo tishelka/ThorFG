@@ -1,0 +1,44 @@
+name: Проверки ThorFG
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  backend:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt
+      - run: python -m compileall -q plugin/backend plugin/main.py scripts runtime
+      - run: python -m unittest discover -s tests -v
+      - if: runner.os == 'Linux'
+        run: bash -n scripts/collect-device.sh
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: plugin/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt
+      - run: npm ci --ignore-scripts
+        working-directory: plugin
+      - run: npm run typecheck
+        working-directory: plugin
+      - run: npm run build
+        working-directory: plugin
+      - run: npm run test:bundle
+        working-directory: plugin
+      - run: python scripts/package_plugin.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ThorFG-dev
+          path: artifacts/ThorFG-dev.zip*

@@ -1,0 +1,18 @@
+{
+  "historical": {
+    "repository": "https://git.lsfg-vk.dev/lsfg-vk-archive.git",
+    "commit": "8b0da2661c6f3473a7fccc8ba643880050e71642",
+    "version": "v2.0.0-dev",
+    "adapter": "historical-2dev",
+    "license": "GPL-3.0-or-later",
+    "api_version": "1.4.328"
+  },
+  "stable": {
+    "repository": "https://git.lsfg-vk.dev/lsfg-vk.git",
+    "commit": "2333707d55b68ddd8066fd95404c3b7d07e00d3a",
+    "version": "2.0.0",
+    "adapter": "stable-2.0",
+    "license": "CC-BY-NC-ND-4.0",
+    "api_version": "1.4.350"
+  }
+}

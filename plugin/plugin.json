@@ -1,0 +1,10 @@
+{
+  "name": "ThorFG",
+  "author": "ThorFG contributors",
+  "flags": [],
+  "api_version": 1,
+  "publish": {
+    "tags": ["arm64", "utilities"],
+    "description": "Профили LSFG-VK, проверка ARM64 runtime и диагностика для ArmadaOS."
+  }
+}
