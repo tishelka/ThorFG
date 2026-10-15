@@ -1,6 +1,10 @@
 export const ru = {
   overview: "Обзор", games: "Игры", diagnostics: "Диагностика", runtime: "Runtime",
   language: "Язык", page: "Раздел", refresh: "Обновить", loading: "Загрузка…",
+  nextSection: "Следующий раздел", backToSection: "Назад к разделу", searchChoices: "Поиск по списку",
+  clearSearch: "Сбросить поиск", choiceCount: "Найдено / всего", noMatches: "Совпадений нет",
+  currentSelection: "Текущий выбор", listPage: "Страница", previousChoices: "Предыдущие варианты",
+  nextChoices: "Следующие варианты", chooseRuntime: "Выберите runtime",
   unknown: "Неизвестно", absent: "Не найдено", found: "Найдено", error: "Ошибка",
   stage: "Состояние", version: "Версия LSFG-VK", arch: "Архитектура", gpu: "GPU",
   driver: "Драйвер", profiles: "Профили / игры", disclaimer: "FG на Thor Pro ещё не проверена",
@@ -41,6 +45,10 @@ export type Key = keyof typeof ru;
 const en: Record<Key, string> = {
   overview: "Overview", games: "Games", diagnostics: "Diagnostics", runtime: "Runtime",
   language: "Language", page: "Section", refresh: "Refresh", loading: "Loading…",
+  nextSection: "Next section", backToSection: "Back to section", searchChoices: "Search list",
+  clearSearch: "Clear search", choiceCount: "Matches / total", noMatches: "No matches",
+  currentSelection: "Current selection", listPage: "Page", previousChoices: "Previous choices",
+  nextChoices: "Next choices", chooseRuntime: "Select a runtime",
   unknown: "Unknown", absent: "Not found", found: "Found", error: "Error",
   stage: "Status", version: "LSFG-VK version", arch: "Architecture", gpu: "GPU",
   driver: "Driver", profiles: "Profiles / games", disclaimer: "FG on Thor Pro has not been verified",
