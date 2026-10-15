@@ -11,6 +11,20 @@ export type Profile = {
   process: string; runtime: string;
 };
 export type Runtime = { slot: string; integrity?: boolean; version?: string; architecture?: string };
+export type ProbeResult = {
+  mode: string; host_load_verified?: boolean | null; layer_discovered?: boolean | null;
+  layer_inserted?: boolean | null; runtime_initialized?: boolean | null; fg_actually_verified: false;
+  timed_out?: boolean; exit_code?: number | null; swapchain_query_warning?: boolean;
+  gpu?: string | null; driver?: string | null; interpretation?: string; error?: string;
+};
+export type Lifecycle = {
+  read_only: boolean; profiles_writable: boolean; activation_allowed: boolean;
+  profile_write_block_reasons: string[]; write_block_reasons: string[];
+  runtime_activated: boolean; slot_installed: boolean; local_build_found: boolean; local_bundle_found: boolean;
+  native_runtime: { architecture: string; library: string; sha256: string; elf_verified: boolean } | null;
+  external_managers: string[]; external_layers: { architecture: string; name: string | null }[];
+  last_probe: ProbeResult | null;
+};
 export type Status = {
   stage: string; hardware_verified: false; host_architecture: string; dll_found: boolean;
   game_count: number; profile_count: number;
@@ -19,6 +33,7 @@ export type Status = {
   vulkan: { listed: boolean | null; gpu: string | null; driver: string | null };
   settings: { active_runtime: string | null; profiles: Record<string, Profile> };
   runtimes: Runtime[]; warnings: string[];
+  lifecycle: Lifecycle;
 };
 export type Game = { appid: string; name: string; install_dir: string };
 export type Process = { pid: number; executables: string[]; layer_mapped: boolean };
@@ -33,4 +48,5 @@ export const rpc = {
   importRuntime: callable<[directory: string, slot: string], Reply<string>>("import_runtime"),
   activate: callable<[slot: string], Reply<string>>("activate_runtime"),
   rollback: callable<[], Reply<string>>("rollback"),
+  probeRuntime: callable<[mode: string], Reply<ProbeResult>>("probe_runtime"),
 };

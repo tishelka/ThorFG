@@ -1,5 +1,76 @@
 # Фактически выполненные проверки
 
+## Восстановление runtime и диагностика — 2026-10-15
+
+Ветка `feat/runtime-recovery-probe`, основана на master после слияния PR №1.
+Это отдельный этап; результаты предыдущих запусков ниже сохранены как история.
+
+### Локально выполнено на Windows x64
+
+* pip install -r requirements.txt, compileall — успешно.
+* unittest: **100 тестов, 93 успешных, 7 пропущенных** из-за Windows error 1314
+  при создании symlink. В Linux эти проверки обязательны и не скрываются как skip.
+* npm ci --ignore-scripts, typecheck, build, test:bundle (один smoke-тест) — успешно.
+* PowerShell 5.1 Parser.ParseFile для SSH helper и bash -n collect-device.sh — успешно.
+* `python -S runtime/build.py --help` и `python -S scripts/device_probe.py --help`
+  работают без site-packages, включая tomlkit.
+* Создан настоящий Decky ZIP, проверены SHA всех 35 файлов и отсутствие .so/DLL.
+  Установка/удаление/rollback в изолированном HOME сохранены; чужие ArmadaLSFG,
+  библиотека и общий TOML остались байт-в-байт без изменений.
+* Архив исходников проверен на новые helper/docs и отсутствие .git/.build/.research/
+  .venv/node_modules. Готовые пакеты — локальные artifacts, не native runtime release.
+* Дополнительно выполнено обновление настоящего временного Git checkout с локальным
+  bare remote вместо сети: ручные build.py/lock сохранены в backup и Git stash,
+  исходная ветка сохранила HEAD, новая получила target, ignored build остался целым.
+
+Новые тесты покрывают trusted mirror/pin/tree, реальные временные Git checkout,
+dirty/untracked source, LLVM tools и flags, отказ при плохом cache, восстановление
+без вызова dnf/acquire/build, SHA256SUMS/provenance, импорт schema 2 в слот,
+архитектуры чужих слоёв, неизменность HOME при passive CLI/RPC, изолированные child
+env/manifest/cache, тайм-аут, safe-update backup/stash и отказ при tracked .build
+в целевой ревизии. При проверке Windows найдено и исправлено декодирование Git
+UTF-8 путей с кириллицей; отдельные subprocess CLI используют согласованную UTF-8.
+Passive CLI проверяется также из копии checkout **внутри** временного HOME:
+запрещены даже новые __pycache__; entry points отключают запись import bytecode.
+
+ELF и compiler output в unit-тестах синтетические/mocked. Успешная упаковка fixture
+не выдаётся за новую ARM64-компиляцию. Реальный GitHub mirror загружен отдельно для
+проверки исторического commit/tree; чужой код не включён в plugin ZIP.
+
+### Что требует реального устройства
+
+Codex не выполнял SSH-установку, ARM64 configure/build, native CDLL или графические
+тесты на Thor. Сообщённые владельцем успешные сборка/CDLL/loader insertion и обычный
+cube отдельно зафиксированы в [протоколе](THOR_REAL_DEVICE_PROGRESS_RU.md).
+Новый путь recovery на существующем build-llvm, UI в реальном Decky, cube с LSFG,
+DLL/swapchain initialization и фактическая FG требуют проверки на устройстве.
+Hardware Verified остаётся false. Никакие чужие файлы на Thor не менялись.
+
+### GitHub Actions
+
+В workflow сохранены обе backend ОС и frontend, добавлены независимость builder/
+probe от site-packages и разбор PowerShell helper.
+Первый [запуск PR №2](https://github.com/tishelka/ThorFG/actions/runs/38773276679)
+для 0311876 прошёл Linux/frontend, но Windows упал до unittest при выводе русской
+`--help` через CP1252. Прочитан traceback UnicodeEncodeError; CLI теперь явно выводит
+UTF-8, и добавлен subprocess regression с PYTHONIOENCODING=cp1252/PYTHONUTF8=0.
+Проверки не отключались. Окончательный результат повторного запуска указан ниже.
+В тестах захвачен stdout mock builder/update: их синтетические «сборка/stash» не
+печатаются как реальные результаты и не зависят от кодировки test runner.
+Полные 100 тестов дополнительно проверены локально с принудительным CP1252.
+
+[Успешный запуск 38773714613](https://github.com/tishelka/ThorFG/actions/runs/38773714613)
+проверяет commit **e0f264d4fa62456b97a0ae5028fda20a0e0b196e**, [PR №2](https://github.com/tishelka/ThorFG/pull/2).
+Получены завершённые jobs и прочитаны backend логи:
+
+| Job | Результат |
+|---|---|
+| backend (ubuntu-latest) | SUCCESS, 100/100 без пропусков; отдельный HOME/XDG RPC и bash -n прошли |
+| backend (windows-latest) | SUCCESS, 100/100 без пропусков; отдельный HOME/XDG RPC и PowerShell 5.1 parser прошли |
+| frontend | SUCCESS, typecheck/build/test:bundle/ZIP/artifact |
+
+Это CI на x64 runner и mocks, а не native ARM64 build или тест Thor.
+
 ## Исправление HOME/XDG и CI — 2026-10-15
 
 Исходный commit: `161afd39e666f0e9bdb440feedc0d8a4c7b403f7`.

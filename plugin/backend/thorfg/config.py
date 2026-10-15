@@ -5,10 +5,10 @@ import tomllib
 import tomlkit
 
 from .paths import ThorError
+from .bundle import SLOT
 
 
 PREFIX = "ThorFG:"
-SLOT = re.compile(r"[a-z][a-z0-9-]{0,39}\Z")
 
 
 def defaults():

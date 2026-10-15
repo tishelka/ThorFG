@@ -12,11 +12,26 @@
 Ревизии зафиксированы в runtime/sources.lock.json. Ветки develop/master не используются
 как плавающая зависимость. Имя historical не означает Known Good на Thor.
 
-`runtime/build.py` сохраняет commit, repository, version, adapter, license,
-compiler, CMake, os-release, список RPM, SOURCE_DATE_EPOCH, file, readelf -h/-d,
-SHA-256 библиотеки/manifest/лицензии/CLI в `build-report.json`.
+`runtime/build.py` проверяет commit **и tree**, доверенный origin и чистоту checkout.
+Для historical добавлено проверенное зеркало eugeniosegala/lsfg-vk-experimental:
+commit 8b0da266… имеет тот же tree `8e35469d1977b8640b44bb88f122a53f7f21eb41`.
+Для stable закреплён tree `94f6e867400fca39e61bd0fefef83ff65aaac24d`.
+Сервер и зеркало не считаются эквивалентными по имени; pin проверяется после checkout.
+
+Новый `build-report.json` schema 2 содержит источник/commit/tree, adapter/license,
+версию компилятора из CMake metadata, текущие версии Clang/LLVM/CMake на момент
+упаковки, CMake/Ninja evidence, readelf -h/-d/--version-info, dynamic symbols и SHA.
+SHA256SUMS покрывает также сам отчёт. Recovery требует явно подтверждённый SHA
+готовой .so или локальную запись от успешной сборки ThorFG. Локальный cache/log и
+заявленный SHA не являются криптографическим доказательством исполнения компилятора;
+текущие версии инструментов не выдаются за версии исходной ручной сборки.
 При установке проверяются источник, адаптер, архитектура, отсутствие патчей и SHA файлов.
 Присутствие отчёта не является подписью доверенного издателя.
+
+Владелец Thor сообщил о сборке SHA-256
+`f01502a88d2991b23db12251264dd59561448846fbcf7f6f91007b95973f581f`, native CDLL и
+loader insertion. Это пока локальный пользовательский результат, не выпущенный
+бинарный runtime ThorFG и не подтверждение FG; см. протокол реального устройства.
 
 Рецепт фиксирует исходники, но Fedora:44 и версии RPM не зафиксированы digest/lockfile.
 Поэтому заявляется воспроизводимость **последовательности сборки**, не byte-for-byte

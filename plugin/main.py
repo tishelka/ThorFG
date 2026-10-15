@@ -59,6 +59,9 @@ class Plugin:
     async def get_processes(self):
         return await self._call("processes")
 
+    async def probe_runtime(self, mode="check"):
+        return await self._call("device_probe", mode)
+
     async def rollback(self):
         return await self._call("rollback")
 

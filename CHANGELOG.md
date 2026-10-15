@@ -1,5 +1,15 @@
 # Изменения
 
+## Восстановление ARM64 runtime и диагностика — 2026-10-15
+
+* LLVM ar/ranlib, отдельный build-llvm, явный resume и доверенное зеркало с commit/tree pin.
+* Упаковка уже готовой сборки без сети/компиляции: schema 2 provenance, ELF, cache/log,
+  подтверждение SHA, SHA256SUMS, совместимость со слотами и прежними bundle.
+* Пассивная диагностика x86_64/i386/AArch64, отдельные изолированные host-load/loader/cube.
+* Decky показывает build/bundle/slot/activation и причину read-only без ложного статуса FG.
+* PowerShell SSH helper: обновление с backup/stash, упаковка build-llvm, доставка одного UI.
+* Документированы переданные владельцем Thor результаты; настоящая FG ещё не проверена.
+
 ## Исправление CI 0.1.0-dev — 2026-10-15
 
 * Изолированы HOME, USERPROFILE и XDG в тестовой fixture: mock Decky больше не использует

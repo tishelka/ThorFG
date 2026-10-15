@@ -1,66 +1,15 @@
-import hashlib
 import json
 from pathlib import Path
 import shutil
-import struct
 
-from .config import SLOT
 from .paths import Paths, ThorError
 from .storage import Store, json_bytes, read_bytes
-
-
-SOURCES = {
-    "8b0da2661c6f3473a7fccc8ba643880050e71642": ("historical-2dev", "v2.0.0-dev", "1.4.328"),
-    "2333707d55b68ddd8066fd95404c3b7d07e00d3a": ("stable-2.0", "2.0.0", "1.4.350"),
-}
-LAYER = "VK_LAYER_LSFGVK_frame_generation"
-LIBRARY = "liblsfg-vk-layer.so"
-MANIFEST = "VkLayer_LSFGVK_frame_generation.json"
-
-
-def sha256(value):
-    return hashlib.sha256(value).hexdigest()
-
-
-def elf(path: Path):
-    with path.open("rb") as stream:
-        header = stream.read(64)
-    if len(header) < 64 or header[:4] != b"\x7fELF" or header[4] != 2 or header[5] != 1 or header[6] != 1:
-        raise ThorError("Требуется ELF64 little-endian shared object")
-    kind, machine = struct.unpack_from("<HH", header, 16)
-    if kind != 3 or machine != 183:
-        raise ThorError("Библиотека не является AArch64 ELF shared object")
-    return "aarch64"
-
-
-def inspect_bundle(directory: Path):
-    for name in (LIBRARY, MANIFEST, "UPSTREAM-LICENSE", "build-report.json"):
-        path = directory / name
-        if path.is_symlink() or not path.is_file():
-            raise ThorError("Артефакт отсутствует или является ссылкой")
-        if path.stat().st_size > 64 * 1024 * 1024:
-            raise ThorError("Артефакт превышает допустимый размер")
-    report = json.loads((directory / "build-report.json").read_text("utf-8"))
-    source = SOURCES.get(report.get("commit"))
-    if source is None or report.get("adapter") != source[0] or report.get("version") != source[1]:
-        raise ThorError("Неизвестная или несовместимая версия runtime")
-    if report.get("architecture") != "aarch64" or report.get("patches") != []:
-        raise ThorError("Не поддерживаются патчи или неверная архитектура runtime")
-    for name in (LIBRARY, MANIFEST, "UPSTREAM-LICENSE"):
-        if sha256((directory / name).read_bytes()) != report.get("sha256", {}).get(name):
-            raise ThorError("Контрольная сумма артефакта не совпадает")
-    elf(directory / LIBRARY)
-    manifest = json.loads((directory / MANIFEST).read_text("utf-8"))
-    layer = manifest.get("layer", {})
-    if layer.get("name") != LAYER or layer.get("type") != "GLOBAL" or layer.get("api_version") != source[2]:
-        raise ThorError("Неверный Vulkan manifest")
-    if layer.get("disable_environment") != {"DISABLE_LSFGVK": "1"}:
-        raise ThorError("Manifest не поддерживает безопасное отключение")
-    return report, manifest
+from .bundle import (SOURCES, LAYER, LIBRARY, MANIFEST, SLOT, sha256, inspect_bundle, verify_sums)
+from .elf import elf, elf_info
 
 
 def layer_conflicts(paths: Paths):
-    roots = [paths.data_root / "vulkan", paths.home / ".local/share/vulkan",
+    roots = [paths.config_root / "vulkan", paths.data_root / "vulkan", paths.home / ".local/share/vulkan",
              Path("/etc/vulkan"), Path("/usr/share/vulkan"), Path("/usr/local/share/vulkan")]
     conflicts, tools = [], []
     seen = set()
@@ -142,7 +91,7 @@ class Runtimes:
 
     def import_bundle(self, directory: Path, name: str):
         directory = directory.resolve()
-        inspect_bundle(directory)
+        bundle_report, _ = inspect_bundle(directory)
         destination = self.slot(name)
         if destination.exists():
             raise ThorError("Слот уже существует; выберите новое имя для обновления")
@@ -150,12 +99,21 @@ class Runtimes:
             raise ThorError("Для установки требуется не менее 128 МиБ свободного места")
         # Снимок байтов повторно проверяется до транзакции, чтобы копирование не приняло
         # изменившийся после inspect_bundle бинарник.
-        changes = {destination / file: (directory / file).read_bytes()
-                   for file in (LIBRARY, MANIFEST, "UPSTREAM-LICENSE", "build-report.json")}
+        names = {LIBRARY, MANIFEST, "UPSTREAM-LICENSE", "build-report.json"}
+        if bundle_report.get("schema_version") == 2:
+            names |= verify_sums(directory) | {"SHA256SUMS"}
+        changes = {destination / file: (directory / file).read_bytes() for file in names}
         report = json.loads(changes[destination / "build-report.json"])
+        if report != bundle_report:
+            raise ThorError("Build-report изменился во время чтения")
         for file in (LIBRARY, MANIFEST, "UPSTREAM-LICENSE"):
             if sha256(changes[destination / file]) != report["sha256"][file]:
                 raise ThorError("Артефакты изменились во время чтения")
+        if report.get("schema_version") == 2:
+            for line in changes[destination / "SHA256SUMS"].decode("utf-8").splitlines():
+                digest, name = line.split("  ", 1)
+                if destination / name not in changes or sha256(changes[destination / name]) != digest:
+                    raise ThorError("SHA256SUMS изменился во время чтения")
         with Store(self.paths).lock():
             if destination.exists():
                 raise ThorError("Слот уже создан другим процессом")
