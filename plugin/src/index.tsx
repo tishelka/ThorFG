@@ -1,5 +1,5 @@
 import {
-  ButtonItem, DropdownItem, Field, PanelSection, PanelSectionRow, SliderField,
+  ButtonItem, Field, PanelSection, PanelSectionRow, SliderField,
   TextField, ToggleField, staticClasses,
 } from "@decky/ui";
 import { definePlugin } from "@decky/api";
@@ -7,6 +7,12 @@ import { useEffect, useState } from "react";
 import { FaBolt } from "react-icons/fa";
 import { Game, Process, Profile, Status, rpc, unwrap } from "./api";
 import { Key, Language, translate } from "./i18n";
+import { SelectionList } from "./SelectionList";
+
+const pages = ["overview", "games", "diagnostics", "runtime"] as const;
+type Page = typeof pages[number];
+type Picker = "game" | "exe" | "profileRuntime" | "runtimeSlot";
+const multipliers = [2, 3, 4];
 
 const initial = (runtime: string): Profile => ({ enabled: false, multiplier: 2, flow_scale: .5,
   performance_mode: true, process: "", runtime });
@@ -14,7 +20,8 @@ const initial = (runtime: string): Profile => ({ enabled: false, multiplier: 2, 
 function Content() {
   const [language, setLanguage] = useState<Language>("ru");
   const t = (key: Key) => translate(language, key);
-  const [page, setPage] = useState("overview");
+  const [page, setPage] = useState<Page>("overview");
+  const [picker, setPicker] = useState<Picker | null>(null);
   const [status, setStatus] = useState<Status>();
   const [games, setGames] = useState<Game[]>([]);
   const [appid, setAppid] = useState("");
@@ -46,13 +53,27 @@ function Content() {
     setAppid(id); setExes([]); setDirty(false); setNotice("");
     setProfile(status?.settings.profiles[id] ?? initial(status?.runtime?.slot ?? "historical"));
   };
-  const change = (patch: Partial<Profile>) => { setProfile({ ...profile, ...patch }); setDirty(true); };
+  const change = (patch: Partial<Profile>) => { setProfile(current => ({ ...current, ...patch })); setDirty(true); };
   const row = (label: string, value: string) => <PanelSectionRow key={label}>
     <Field label={label}><span style={{ color: "#dbeafe", overflowWrap: "anywhere" }}>{value}</span></Field>
   </PanelSectionRow>;
   const runtimeOptions = status?.runtimes.filter(r => r.integrity).map(r => ({
     data: r.slot, label: `${r.slot} · ${r.version}`,
   })) ?? [];
+  const pickerOptions = picker === "game" ? games.map(game => ({ value: game.appid, label: `${game.name} · ${game.appid}` }))
+    : picker === "exe" ? exes.map(exe => ({ value: exe, label: exe }))
+    : runtimeOptions.map(option => ({ value: option.data, label: option.label }));
+  const pickerTitle = t(picker === "game" ? "chooseGame" : picker === "exe" ? "chooseExe"
+    : picker === "profileRuntime" ? "selectRuntime" : "runtime");
+  const pickerValue = picker === "game" ? appid : picker === "exe" ? profile.process
+    : picker === "profileRuntime" ? profile.runtime : selectedSlot;
+  const choose = (value: string) => {
+    if (picker === "game") selectGame(value);
+    else if (picker === "exe") change({ process: value });
+    else if (picker === "profileRuntime") change({ runtime: value });
+    else if (picker === "runtimeSlot") setSelectedSlot(value);
+    setPicker(null);
+  };
   const canConfigure = !!status?.lifecycle.profiles_writable;
   const lifecycle = status?.lifecycle;
   const probe = lifecycle?.last_probe;
@@ -83,17 +104,20 @@ function Content() {
 
   return <div style={{ color: "#e5edf7", paddingBottom: 12 }}>
     <PanelSection>
-      <PanelSectionRow><DropdownItem label={t("page")} selectedOption={page} disabled={busy}
-        rgOptions={(["overview", "games", "diagnostics", "runtime"] as const).map(key => ({ data: key, label: t(key) }))}
-        onChange={option => { setPage(option.data as string); setConfirm(false); }} /></PanelSectionRow>
-      <PanelSectionRow><DropdownItem label={t("language")} selectedOption={language}
-        rgOptions={[{ data: "ru", label: "Русский" }, { data: "en", label: "English" }]}
-        onChange={option => setLanguage(option.data as Language)} /></PanelSectionRow>
+      <PanelSectionRow><ButtonItem label={t("page")} disabled={busy}
+        description={`${t("nextSection")}: ${t(pages[(pages.indexOf(page) + 1) % pages.length])}`}
+        onClick={() => { setPage(current => pages[(pages.indexOf(current) + 1) % pages.length]); setPicker(null); setConfirm(false); }}>
+        {t(page)}</ButtonItem></PanelSectionRow>
+      <PanelSectionRow><ButtonItem label={t("language")} disabled={busy}
+        onClick={() => setLanguage(current => current === "ru" ? "en" : "ru")}>
+        {language === "ru" ? "Русский" : "English"}</ButtonItem></PanelSectionRow>
       <PanelSectionRow><ButtonItem disabled={busy} layout="below" onClick={() => void run(() => refresh())}>
         {busy ? t("loading") : t("refresh")}</ButtonItem></PanelSectionRow>
       {error && <PanelSectionRow><div role="alert" style={{ padding: "10px 0", color: "#fca5a5", whiteSpace: "pre-wrap" }}>{error}</div></PanelSectionRow>}
       {notice && <PanelSectionRow><div role="status" style={{ padding: "10px 0", color: "#a7f3d0", overflowWrap: "anywhere" }}>{notice}</div></PanelSectionRow>}
     </PanelSection>
+    {picker ? <SelectionList key={picker} title={pickerTitle} options={pickerOptions} selected={pickerValue}
+      disabled={busy} t={t} onSelect={choose} onClose={() => setPicker(null)} /> : <>
     {page === "overview" && <PanelSection title="ThorFG">
       <PanelSectionRow><div style={{ padding: "8px 0 14px", color: "#fcd34d" }}>● {t("disclaimer")}</div></PanelSectionRow>
       {row(t("stage"), status ? status.stage === "Configuration Verified" ? status.stage : t("needsCheck") : t("unknown"))}
@@ -107,28 +131,31 @@ function Content() {
     </PanelSection>}
     {page === "games" && <>
       <PanelSection title={t("games")}>
-        <PanelSectionRow><DropdownItem label={t("chooseGame")} selectedOption={appid} disabled={busy || !games.length}
-          strDefaultLabel={t("chooseGame")} rgOptions={games.map(g => ({ data: g.appid, label: g.name }))}
-          onChange={option => selectGame(option.data as string)} /></PanelSectionRow>
+        <PanelSectionRow><ButtonItem label={t("chooseGame")} layout="below" disabled={busy || !games.length}
+          onClick={() => setPicker("game")}>
+          {games.find(game => game.appid === appid)?.name ?? t("chooseGame")}</ButtonItem></PanelSectionRow>
         {!games.length && row(t("games"), t("noGames"))}
       </PanelSection>
       {appid && <PanelSection title={`${t("profiles")} · ${appid}`}>
         <PanelSectionRow><ButtonItem disabled={busy} onClick={() => void run(async () => {
-          setExes(await unwrap(rpc.executables(appid)));
+          const candidates = await unwrap(rpc.executables(appid));
+          setExes(candidates);
+          if (candidates.length) setPicker("exe");
         })}>{t("scanExe")}</ButtonItem></PanelSectionRow>
-        {!!exes.length && <PanelSectionRow><DropdownItem label={t("chooseExe")} selectedOption={profile.process}
-          disabled={busy} rgOptions={exes.map(exe => ({ data: exe, label: exe }))}
-          onChange={option => change({ process: option.data as string })} /></PanelSectionRow>}
+        {!!exes.length && <PanelSectionRow><ButtonItem label={t("chooseExe")} layout="below" disabled={busy}
+          onClick={() => setPicker("exe")}>
+          {profile.process || t("chooseExe")}</ButtonItem></PanelSectionRow>}
         <PanelSectionRow><TextField label={t("process")} description={t("processHint")} value={profile.process}
           disabled={busy} onChange={event => change({ process: event.target.value })} /></PanelSectionRow>
         <PanelSectionRow><ToggleField label={t("enabled")} description={t("disableHint")} checked={profile.enabled}
           disabled={busy || (!canConfigure && !profile.enabled)} onChange={enabled => change({ enabled })} /></PanelSectionRow>
-        <PanelSectionRow><DropdownItem label={t("selectRuntime")} selectedOption={profile.runtime}
-          disabled={busy || !runtimeOptions.length} rgOptions={runtimeOptions}
-          onChange={option => change({ runtime: option.data as string })} /></PanelSectionRow>
-        <PanelSectionRow><DropdownItem label={t("multiplier")} selectedOption={profile.multiplier}
-          disabled={busy || !canConfigure} rgOptions={[2, 3, 4].map(data => ({ data, label: `×${data}` }))}
-          onChange={option => change({ multiplier: option.data as number })} /></PanelSectionRow>
+        <PanelSectionRow><ButtonItem label={t("selectRuntime")} layout="below" disabled={busy || !runtimeOptions.length}
+          onClick={() => setPicker("profileRuntime")}>
+          {runtimeOptions.find(option => option.data === profile.runtime)?.label ?? profile.runtime}</ButtonItem></PanelSectionRow>
+        <PanelSectionRow><ButtonItem label={t("multiplier")} disabled={busy || !canConfigure} onClick={() => {
+          setProfile(current => ({ ...current, multiplier: multipliers[(multipliers.indexOf(current.multiplier) + 1) % multipliers.length] }));
+          setDirty(true);
+        }}>×{profile.multiplier}</ButtonItem></PanelSectionRow>
         <PanelSectionRow><SliderField label={t("scale")} value={profile.flow_scale} min={.25} max={1} step={.05}
           showValue disabled={busy || !canConfigure} onChange={flow_scale => change({ flow_scale })} /></PanelSectionRow>
         <PanelSectionRow><ToggleField label={t("performance")} checked={profile.performance_mode}
@@ -176,8 +203,9 @@ function Content() {
       <PanelSectionRow><ButtonItem disabled={busy || !directory || !slot} onClick={() => void run(async () => {
         await unwrap(rpc.importRuntime(directory, slot)); await refresh(); setNotice(t("success"));
       })}>{t("importRuntime")}</ButtonItem></PanelSectionRow>
-      <PanelSectionRow><DropdownItem label={t("runtime")} selectedOption={selectedSlot} disabled={busy || !runtimeOptions.length}
-        rgOptions={runtimeOptions} onChange={option => setSelectedSlot(option.data as string)} /></PanelSectionRow>
+      <PanelSectionRow><ButtonItem label={t("runtime")} layout="below" disabled={busy || !runtimeOptions.length}
+        onClick={() => setPicker("runtimeSlot")}>
+        {runtimeOptions.find(option => option.data === selectedSlot)?.label ?? t("chooseRuntime")}</ButtonItem></PanelSectionRow>
       <PanelSectionRow><Field description={t("rollbackHint")} /></PanelSectionRow>
       <PanelSectionRow><ButtonItem disabled={busy || !selectedSlot || !lifecycle?.activation_allowed} onClick={() => void run(async () => {
         await unwrap(rpc.activate(selectedSlot)); await refresh(); setNotice(t("success"));
@@ -187,6 +215,7 @@ function Content() {
         setConfirm(false); void run(async () => { await unwrap(rpc.rollback()); await refresh(); setNotice(t("success")); });
       }}>{t(confirm ? "confirmRollback" : "rollback")}</ButtonItem></PanelSectionRow>
     </PanelSection>}
+    </>}
   </div>;
 }
 
