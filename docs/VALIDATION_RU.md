@@ -8,7 +8,7 @@
 ### Локально выполнено на Windows x64
 
 * pip install -r requirements.txt, compileall — успешно.
-* unittest: **99 тестов, 92 успешных, 7 пропущенных** из-за Windows error 1314
+* unittest: **100 тестов, 93 успешных, 7 пропущенных** из-за Windows error 1314
   при создании symlink. В Linux эти проверки обязательны и не скрываются как skip.
 * npm ci --ignore-scripts, typecheck, build, test:bundle (один smoke-тест) — успешно.
 * PowerShell 5.1 Parser.ParseFile для SSH helper и bash -n collect-device.sh — успешно.
@@ -44,8 +44,12 @@ Hardware Verified остаётся false. Никакие чужие файлы �
 ### GitHub Actions
 
 В workflow сохранены обе backend ОС и frontend, добавлены независимость builder/
-probe от site-packages и разбор PowerShell helper. Результат нового запуска будет
-добавлен после публикации PR; старые CI результаты ниже к этой ветке не относятся.
+probe от site-packages и разбор PowerShell helper.
+Первый [запуск PR №2](https://github.com/tishelka/ThorFG/actions/runs/38773276679)
+для 0311876 прошёл Linux/frontend, но Windows упал до unittest при выводе русской
+`--help` через CP1252. Прочитан traceback UnicodeEncodeError; CLI теперь явно выводит
+UTF-8, и добавлен subprocess regression с PYTHONIOENCODING=cp1252/PYTHONUTF8=0.
+Проверки не отключались. Окончательный результат повторного запуска указан ниже.
 
 ## Исправление HOME/XDG и CI — 2026-10-15
 

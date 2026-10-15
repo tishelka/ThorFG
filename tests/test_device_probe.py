@@ -158,6 +158,15 @@ class ProbeTests(Base):
         result = analyze_vulkan("", f"ERROR loading {LAYER}", 1)
         self.assertFalse(result["layer_discovered"])
 
+    def test_cli_help_is_utf8_even_with_legacy_windows_output_encoding(self):
+        root = Path(__file__).resolve().parents[1]
+        for script in ("runtime/build.py", "scripts/device_probe.py", "scripts/thorfg.py"):
+            result = subprocess.run([sys.executable, str(root / script), "--help"],
+                                    capture_output=True, encoding="utf-8", timeout=20,
+                                    env={**os.environ, "PYTHONUTF8": "0", "PYTHONIOENCODING": "cp1252"})
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("usage:", result.stdout)
+
     def test_probe_evidence_is_merged_for_one_binary_hash(self):
         digest = "a" * 64
         with patch("thorfg.service.DeviceProbe.run", side_effect=[
