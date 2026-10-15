@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import sys
 
+sys.dont_write_bytecode = True  # Passive check не создаёт __pycache__ в checkout пользователя.
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "plugin/py_modules"))
 sys.path.insert(0, str(ROOT / "plugin/backend"))

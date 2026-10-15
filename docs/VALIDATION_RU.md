@@ -30,6 +30,8 @@ dirty/untracked source, LLVM tools и flags, отказ при плохом cach
 env/manifest/cache, тайм-аут, safe-update backup/stash и отказ при tracked .build
 в целевой ревизии. При проверке Windows найдено и исправлено декодирование Git
 UTF-8 путей с кириллицей; отдельные subprocess CLI используют согласованную UTF-8.
+Passive CLI проверяется также из копии checkout **внутри** временного HOME:
+запрещены даже новые __pycache__; entry points отключают запись import bytecode.
 
 ELF и compiler output в unit-тестах синтетические/mocked. Успешная упаковка fixture
 не выдаётся за новую ARM64-компиляцию. Реальный GitHub mirror загружен отдельно для

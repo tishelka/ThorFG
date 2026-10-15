@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import struct
+import shutil
 import subprocess
 import os
 import sys
@@ -113,12 +114,19 @@ class ProbeTests(Base):
 
     def test_check_dry_run_diagnose_cli_do_not_write_to_home(self):
         root = Path(__file__).resolve().parents[1]
+        # На Thor сам checkout тоже внутри HOME. Проверяем и скрытые import cache,
+        # а не только настройки вне каталога разработки.
+        project = self.home / "thorfg"
+        shutil.copytree(root / "plugin/backend", project / "plugin/backend",
+                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        for script in ("thorfg.py", "device_probe.py"):
+            self.put(project / "scripts" / script, (root / "scripts" / script).read_bytes())
         before = self.snapshot()
         for mode in ("check", "dry-run", "diagnose"):
-            result = subprocess.run([sys.executable, str(root / "scripts/thorfg.py"), mode],
+            result = subprocess.run([sys.executable, str(project / "scripts/thorfg.py"), mode],
                                     capture_output=True, text=True, encoding="utf-8", env={**os.environ, "PYTHONUTF8": "1"}, timeout=20)
             self.assertEqual(result.returncode, 0, result.stderr)
-        result = subprocess.run([sys.executable, str(root / "scripts/device_probe.py")],
+        result = subprocess.run([sys.executable, str(project / "scripts/device_probe.py")],
                                 capture_output=True, text=True, encoding="utf-8", env={**os.environ, "PYTHONUTF8": "1"}, timeout=20)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(before, self.snapshot())
