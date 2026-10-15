@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 from pathlib import Path
 
@@ -30,14 +30,21 @@ class Paths:
     config_root: Path | None = None
     data_root: Path | None = None
     decky_root: Path | None = None
+    _home_alias: Path = field(init=False, repr=False, compare=False)
 
     def __post_init__(self):
-        object.__setattr__(self, "home", self.home.resolve())
+        declared_home = Path(self.home)
+        if not declared_home.is_absolute() or ".." in declared_home.parts:
+            raise ThorError("Домашний каталог должен быть абсолютным путём без ..")
+        # Только явно переданный HOME — доверенный корень. Его системный alias
+        # (/home -> /var/home на Fedora) разрешаем до проверки дочерних путей.
+        object.__setattr__(self, "_home_alias", declared_home)
+        object.__setattr__(self, "home", declared_home.resolve())
         for field, default in (("config_root", self.home / ".config"),
                                ("data_root", self.home / ".local/share"),
                                ("decky_root", self.home / "homebrew")):
             value = getattr(self, field) or default
-            object.__setattr__(self, field, guarded(value, self.home))
+            object.__setattr__(self, field, self.safe(value))
 
     @classmethod
     def environment(cls, home: Path | None = None, decky_root: Path | None = None):
@@ -68,4 +75,11 @@ class Paths:
         return self.data_root / "vulkan/implicit_layer.d/ThorFG.json"
 
     def safe(self, path):
-        return guarded(Path(path), self.home)
+        path = Path(path)
+        if ".." in path.parts:
+            raise ThorError("Родительские переходы в пути записи запрещены")
+        if path.is_relative_to(self._home_alias):
+            # Не resolve() произвольного кандидата: ссылки ниже HOME по-прежнему
+            # проверяются guarded(), даже если ведут обратно внутрь HOME.
+            path = self.home / path.relative_to(self._home_alias)
+        return guarded(path, self.home)

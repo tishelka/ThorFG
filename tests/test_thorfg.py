@@ -4,6 +4,7 @@ import asyncio
 import importlib.util
 import json
 import logging
+import os
 from pathlib import Path
 import struct
 import sys
@@ -37,6 +38,15 @@ class Base(unittest.TestCase):
         self.root = Path(self.temporary.name).resolve()
         self.home = self.root / "user"
         self.home.mkdir()
+        # HOME Decky в тесте не связан с HOME/XDG настоящего runner. Остальное
+        # окружение (PATH и т. п.) оставляем; patch восстанавливает его после теста.
+        environment = patch.dict(os.environ, {
+            "HOME": str(self.home), "USERPROFILE": str(self.home),
+            "XDG_CONFIG_HOME": str(self.home / ".config"),
+            "XDG_DATA_HOME": str(self.home / ".local/share"),
+        })
+        environment.start()
+        self.addCleanup(environment.stop)
         self.paths = Paths(self.home)
         self.service = Service(self.paths)
 
@@ -239,8 +249,10 @@ class StorageTests(Base):
         link = self.home / "link"
         try:
             link.symlink_to(outside, target_is_directory=True)
-        except OSError:
-            self.skipTest("Windows не разрешает symlink для этого пользователя")
+        except OSError as exc:
+            if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+                self.skipTest("Windows не разрешает symlink для этого пользователя")
+            raise
         with self.assertRaises(ThorError):
             atomic(link / "file", b"bad", self.paths)
 
