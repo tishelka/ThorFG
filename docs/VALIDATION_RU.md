@@ -33,12 +33,26 @@ RPC-тест из заведомо чужого runner HOME/XDG и требуе�
 * Дополнительный RPC-тест с чужими HOME/XDG — успешен.
 * npm ci --ignore-scripts, typecheck, build, test:bundle — успешно; npm audit: 0.
 * bash -n scripts/collect-device.sh через Git Bash — успешно.
+* package_plugin.py — успешно; SHA файлов итогового ZIP проверены, его установка,
+  удаление и rollback выполнены в изолированном HOME. Runtime/DLL в ZIP отсутствуют.
 
 ### GitHub Actions после исправления
 
-Результат нового удалённого запуска будет зафиксирован после push и получения
-завершённых jobs. Локальный успех не считается подтверждением Ubuntu CI.
-Workflow не отключает тесты и не использует continue-on-error.
+Подтверждён [запуск 38743041062](https://github.com/tishelka/ThorFG/actions/runs/38743041062)
+для исправляющего commit **85ccf7c17216fbacda5bbea52e9f3c635d0731d8**, ветка
+`fix/xdg-home-ci`, [черновой PR №1](https://github.com/tishelka/ThorFG/pull/1).
+Получены завершённые jobs и прочитаны логи обоих backend:
+
+| Job | Результат |
+|---|---|
+| backend (ubuntu-latest) | SUCCESS: 67/67 тестов, без пропусков; дополнительный RPC-тест с чужими HOME/XDG успешен; bash -n успешен |
+| backend (windows-latest) | SUCCESS: 67/67 тестов, без пропусков; дополнительный RPC-тест с чужими HOME/XDG успешен |
+| frontend | SUCCESS: npm ci, typecheck, build, test:bundle, ZIP и upload artifact |
+
+В отличие от локального Windows-хоста, оба runner разрешили создание symlink:
+все позитивные и негативные сценарии реальной файловой системы исполнились.
+Workflow не отключает тесты и не использует continue-on-error. Проверка относится
+к ветке PR: master на этом этапе остался на исходном коммите.
 
 ### Mock и аппаратные проверки
 
