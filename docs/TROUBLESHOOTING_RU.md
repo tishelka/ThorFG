@@ -1,5 +1,21 @@
 # Диагностика
 
+Для уже собранного Thor начните с [коротких SSH-команд](THOR_REAL_DEVICE_PROGRESS_RU.md).
+Обычный `check`/`diagnose` больше не запускает Vulkan. Явный CLI-флаг
+`diagnose --probe-vulkan` или отдельная кнопка Decky запускает изолированный процесс.
+Экспорт отчёта сам по себе Vulkan не запускает.
+
+| Новый симптом | Действие |
+|---|---|
+| CMAKE_CXX_COMPILER_AR/RANLIB-NOTFOUND | Нужен пакет llvm и абсолютные LLVM пути. Старый cache не удаляйте; выберите новый --build-dir, см. BUILD_RU |
+| Уже есть успешный build-llvm | --package-existing с --use-existing-checkout, --build-dir и подтверждённым --expected-sha256; повторная компиляция не нужна |
+| Нет build record или Ninja link-записи | Упаковщик не выдумывает provenance. Сверьте выбранный build-dir/исходный протокол; сохраните исходный результат |
+| Назначение artifacts/runtime/historical занято | Новый --output; старые артефакты не перезаписываются |
+| External LSFG, read-only mode | Ожидаемо при ArmadaLSFG/Decky LSFG-VK. UI/диагностика доступны; не перемещайте чужие x86/i386 .so и JSON |
+| CDLL OK, но runtime initialized неизвестно | Проверена загрузка зависимостей. Swapchain/DLL initialization и игра — отдельные этапы |
+| Loader вставил слой, vkCreateSwapchainKHR error -3 | Ошибка diagnostic query не доказывает несовместимость Turnip; нужен отдельный cube-тест |
+| vkcube через SSH не видит сессию | Откройте Desktop Mode, проверьте сокет своего пользователя и -WaylandDisplay; root не используйте |
+
 | Симптом | Что проверить |
 |---|---|
 | ThorFG отсутствует в Decky | Каталог homebrew, plugin.json, версия Decky, перезагрузка списка плагинов |

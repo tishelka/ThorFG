@@ -53,7 +53,27 @@ function Content() {
   const runtimeOptions = status?.runtimes.filter(r => r.integrity).map(r => ({
     data: r.slot, label: `${r.slot} · ${r.version}`,
   })) ?? [];
-  const canConfigure = !!status?.runtime;
+  const canConfigure = !!status?.lifecycle.profiles_writable;
+  const lifecycle = status?.lifecycle;
+  const probe = lifecycle?.last_probe;
+  const layerDiscovered = status?.vulkan.listed ?? probe?.layer_discovered;
+  const evidence = (value?: boolean | null) => value === true ? t("verified") : value === false ? t("needsCheck") : t("unknown");
+  const lifecycleView = <>
+    {row(t("localBuild"), t(lifecycle?.local_build_found ? "found" : "absent"))}
+    {row(t("localBundle"), t(lifecycle?.local_bundle_found ? "found" : "absent"))}
+    {row(t("slotInstalled"), t(lifecycle?.slot_installed ? "found" : "absent"))}
+    {row(t("activated"), t(lifecycle?.runtime_activated ? "found" : "absent"))}
+    {row(t("arch"), lifecycle?.native_runtime?.architecture ?? t("unknown"))}
+    {row(t("externalManagers"), lifecycle?.external_managers.join(", ") || t("absent"))}
+    {row(t("externalLayers"), lifecycle?.external_layers.map(layer => layer.architecture).join(" / ") || t("absent"))}
+    {row(t("coexistence"), lifecycle?.read_only ? t("readOnly") : t("writable"))}
+    {!canConfigure && <PanelSectionRow><Field label={t("blocked")}
+      description={lifecycle?.profile_write_block_reasons.join(". ")} /></PanelSectionRow>}
+    {row(t("hostLoaded"), evidence(probe?.host_load_verified))}
+    {row(t("layerInserted"), evidence(probe?.layer_inserted))}
+    {row(t("runtimeInit"), evidence(probe?.runtime_initialized))}
+    <PanelSectionRow><Field description={t("gamePending")} /></PanelSectionRow>
+  </>;
   const checkNames: Record<string, Key> = { architecture: "arch", settings: "settings", config: "config",
     runtime: "runtime", dll: "dll", backend: "backend", transaction: "transaction", tools: "tools",
     loader: "loader", manager_conflict: "managerConflict", layer_conflict: "layerConflict",
@@ -77,10 +97,10 @@ function Content() {
       {row(t("stage"), status ? status.stage === "Configuration Verified" ? status.stage : t("needsCheck") : t("unknown"))}
       {row(t("version"), status?.runtime?.version ?? t("absent"))}
       {row(t("arch"), status?.runtime?.architecture ?? status?.host_architecture ?? t("unknown"))}
-      {row("Vulkan Layer", status?.vulkan.listed == null ? t("unknown") : t(status.vulkan.listed ? "found" : "absent"))}
+      {row("Vulkan Layer", layerDiscovered == null ? t("unknown") : t(layerDiscovered ? "found" : "absent"))}
       {row("Lossless Scaling DLL", t(status?.dll_found ? "found" : "absent"))}
-      {row(t("gpu"), status?.vulkan.gpu ?? t("unknown"))}
-      {row(t("driver"), status?.vulkan.driver ?? t("unknown"))}
+      {row(t("gpu"), status?.vulkan.gpu ?? probe?.gpu ?? t("unknown"))}
+      {row(t("driver"), status?.vulkan.driver ?? probe?.driver ?? t("unknown"))}
       {row(t("profiles"), status ? `${status.profile_count} / ${status.game_count}` : t("unknown"))}
     </PanelSection>}
     {page === "games" && <>
@@ -112,17 +132,25 @@ function Content() {
         <PanelSectionRow><ToggleField label={t("performance")} checked={profile.performance_mode}
           disabled={busy || !canConfigure} onChange={performance_mode => change({ performance_mode })} /></PanelSectionRow>
         {row(t("stage"), dirty ? t("draft") : status?.settings.profiles[appid]?.enabled ? t("applied") : t("inactive"))}
-        {!canConfigure && row(t("runtime"), t("noRuntime"))}
-        <PanelSectionRow><ButtonItem disabled={busy || !dirty} onClick={() => void run(async () => {
+        {!canConfigure && <PanelSectionRow><Field label={t("blocked")}
+          description={lifecycle?.profile_write_block_reasons.join(". ")} /></PanelSectionRow>}
+        <PanelSectionRow><ButtonItem disabled={busy || !dirty || !canConfigure} onClick={() => void run(async () => {
           await unwrap(rpc.save(appid, profile)); setDirty(false); await refresh(); setNotice(t("savedHint"));
         })}>{t("save")}</ButtonItem></PanelSectionRow>
       </PanelSection>}
     </>}
     {page === "diagnostics" && <PanelSection title={t("health")}>
+      {lifecycleView}
       {status?.checks.map(check => <PanelSectionRow key={check.id}><Field label={t(checkNames[check.id] ?? "health")}
         description={language === "ru" ? check.message : t(check.state === "ok" ? "verified" : check.state === "error" ? "needsCheck" : "unknown")}><span style={{ color: check.state === "ok" ? "#a7f3d0" : check.state === "error" ? "#fca5a5" : "#fcd34d" }}>
           {check.state === "ok" ? "✓" : check.state === "error" ? "!" : "?"}</span></Field></PanelSectionRow>)}
-      <PanelSectionRow><ButtonItem disabled={busy} onClick={() => void run(() => refresh(true))}>{t("probe")}</ButtonItem></PanelSectionRow>
+      <PanelSectionRow><Field description={t("temporaryProbe")} /></PanelSectionRow>
+      <PanelSectionRow><ButtonItem disabled={busy || !lifecycle?.native_runtime} onClick={() => void run(async () => {
+        const result = await unwrap(rpc.probeRuntime("host-load")); await refresh();
+        if (result.error) setError(result.error);
+      })}>{t("hostLoad")}</ButtonItem></PanelSectionRow>
+      <PanelSectionRow><ButtonItem disabled={busy} onClick={() => void run(() => refresh(true))}>{t("loaderProbe")}</ButtonItem></PanelSectionRow>
+      {(probe?.interpretation || probe?.error) && <PanelSectionRow><Field description={probe.error ?? probe.interpretation} /></PanelSectionRow>}
       <PanelSectionRow><ButtonItem disabled={busy} onClick={() => void run(async () => {
         setNotice(`${t("exported")}: ${await unwrap(rpc.export())}`);
       })}>{t("export")}</ButtonItem></PanelSectionRow>
@@ -131,11 +159,12 @@ function Content() {
       })}>{t("processes")}</ButtonItem></PanelSectionRow>
       {processes?.length === 0 && row(t("processes"), t("noProcesses"))}
       {processes?.map(p => row(`PID ${p.pid}`, `${p.executables.join(", ")} · ${t(p.layer_mapped ? "mapped" : "unmapped")}`))}
-      <PanelSectionRow><ButtonItem disabled={busy} onClick={() => void run(async () => {
+      <PanelSectionRow><ButtonItem disabled={busy || lifecycle?.read_only} onClick={() => void run(async () => {
         const count = await unwrap(rpc.importProfiles()); await refresh(); setNotice(`${t("imported")}: ${count}`);
       })}>{t("importProfiles")}</ButtonItem></PanelSectionRow>
     </PanelSection>}
     {page === "runtime" && <PanelSection title={t("runtime")}>
+      {lifecycleView}
       {row(t("activeRuntime"), status?.runtime?.slot ?? t("absent"))}
       <PanelSectionRow><Field description={t("localOnly")} /></PanelSectionRow>
       <PanelSectionRow><TextField label={t("bundle")} value={directory} disabled={busy}
@@ -148,7 +177,7 @@ function Content() {
       <PanelSectionRow><DropdownItem label={t("runtime")} selectedOption={selectedSlot} disabled={busy || !runtimeOptions.length}
         rgOptions={runtimeOptions} onChange={option => setSelectedSlot(option.data as string)} /></PanelSectionRow>
       <PanelSectionRow><Field description={t("rollbackHint")} /></PanelSectionRow>
-      <PanelSectionRow><ButtonItem disabled={busy || !selectedSlot} onClick={() => void run(async () => {
+      <PanelSectionRow><ButtonItem disabled={busy || !selectedSlot || !lifecycle?.activation_allowed} onClick={() => void run(async () => {
         await unwrap(rpc.activate(selectedSlot)); await refresh(); setNotice(t("success"));
       })}>{t("activate")}</ButtonItem></PanelSectionRow>
       <PanelSectionRow><ButtonItem disabled={busy} onClick={() => {

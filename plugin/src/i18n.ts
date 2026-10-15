@@ -28,6 +28,13 @@ export const ru = {
   transaction: "Журнал восстановления", managerConflict: "Другие менеджеры LSFG",
   layerConflict: "Другие установки LSFG", tools: "Vulkan-инструменты", loader: "Обнаружение loader",
   overrides: "Переменные окружения", armada: "ArmadaOS",
+  coexistence: "Сосуществование", readOnly: "Режим только чтения", writable: "Запись разрешена",
+  localBuild: "Локальная ARM64-библиотека", localBundle: "Проверенный пакет сборки", slotInstalled: "Runtime в слоте ThorFG",
+  activated: "Слой ThorFG активирован", blocked: "Изменение профилей заблокировано",
+  externalManagers: "Сторонние менеджеры", externalLayers: "Сторонние LSFG-слои",
+  hostLoad: "Проверить загрузку .so на host", loaderProbe: "Изолированный тест Loader",
+  hostLoaded: "Host load verified", layerInserted: "Vulkan loader inserted", runtimeInit: "Runtime initialized",
+  gamePending: "Тест FG в игре ожидается", temporaryProbe: "Тест действует только на дочерний процесс, с тайм-аутом 15 секунд",
 };
 export type Key = keyof typeof ru;
 const en: Record<Key, string> = {
@@ -60,6 +67,13 @@ const en: Record<Key, string> = {
   transaction: "Recovery journal", managerConflict: "Other LSFG managers",
   layerConflict: "Other LSFG installations", tools: "Vulkan tools", loader: "Loader discovery",
   overrides: "Environment overrides", armada: "ArmadaOS",
+  coexistence: "Coexistence", readOnly: "Read-only mode", writable: "Writes allowed",
+  localBuild: "Local ARM64 library", localBundle: "Verified build bundle", slotInstalled: "Runtime in ThorFG slot",
+  activated: "ThorFG layer activated", blocked: "Profile changes blocked",
+  externalManagers: "External managers", externalLayers: "External LSFG layers",
+  hostLoad: "Test native .so loading", loaderProbe: "Isolated Loader test",
+  hostLoaded: "Host load verified", layerInserted: "Vulkan loader inserted", runtimeInit: "Runtime initialized",
+  gamePending: "Game FG test pending", temporaryProbe: "Child-process-only test, with a 15-second timeout",
 };
 export type Language = "ru" | "en";
 export const translate = (language: Language, key: Key): string => (language === "ru" ? ru : en)[key];

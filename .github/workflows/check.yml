@@ -13,7 +13,19 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r requirements.txt
       - run: python -m compileall -q plugin/backend plugin/main.py scripts runtime
+      - name: Builder и passive probe не требуют site-packages
+        run: |
+          python -S runtime/build.py --help
+          python -S scripts/device_probe.py --help
       - run: python -m unittest discover -s tests -v
+      - name: Синтаксис Windows SSH helper
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile("$PWD/scripts/thor.ps1", [ref]$tokens, [ref]$errors)
+          if ($errors.Count) { $errors | Out-String | Write-Error }
       - name: Проверка изоляции mock Decky от HOME и XDG runner
         shell: python
         run: |

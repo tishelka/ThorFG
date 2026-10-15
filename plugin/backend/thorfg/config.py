@@ -8,7 +8,7 @@ from .paths import ThorError
 
 
 PREFIX = "ThorFG:"
-SLOT = re.compile(r"[a-z][a-z0-9-]{0,39}\Z")
+from .bundle import SLOT
 
 
 def defaults():

@@ -23,12 +23,13 @@ def main():
     parser.add_argument("--bundle", type=Path, help="Каталог проверяемой локальной ARM64-сборки")
     parser.add_argument("--slot", default="historical", help="Имя слота runtime")
     parser.add_argument("--export", action="store_true", help="Сохранить обезличенный отчёт")
+    parser.add_argument("--probe-vulkan", action="store_true", help="Явный изолированный Vulkan-тест только с diagnose")
     args = parser.parse_args()
     paths = Paths.environment()
     service = Service(paths)
     try:
         if args.mode in ("check", "diagnose"):
-            print(json.dumps(service.status(probe=args.mode == "diagnose"), ensure_ascii=False, indent=2))
+            print(json.dumps(service.status(probe=args.mode == "diagnose" and args.probe_vulkan), ensure_ascii=False, indent=2))
             if args.export:
                 print("Обезличенный отчёт:", service.export())
             return 0

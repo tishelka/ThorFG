@@ -1,5 +1,52 @@
 # Фактически выполненные проверки
 
+## Восстановление runtime и диагностика — 2026-10-15
+
+Ветка `feat/runtime-recovery-probe`, основана на master после слияния PR №1.
+Это отдельный этап; результаты предыдущих запусков ниже сохранены как история.
+
+### Локально выполнено на Windows x64
+
+* pip install -r requirements.txt, compileall — успешно.
+* unittest: **99 тестов, 92 успешных, 7 пропущенных** из-за Windows error 1314
+  при создании symlink. В Linux эти проверки обязательны и не скрываются как skip.
+* npm ci --ignore-scripts, typecheck, build, test:bundle (один smoke-тест) — успешно.
+* PowerShell 5.1 Parser.ParseFile для SSH helper и bash -n collect-device.sh — успешно.
+* `python -S runtime/build.py --help` и `python -S scripts/device_probe.py --help`
+  работают без site-packages, включая tomlkit.
+* Создан настоящий Decky ZIP, проверены SHA всех 35 файлов и отсутствие .so/DLL.
+  Установка/удаление/rollback в изолированном HOME сохранены; чужие ArmadaLSFG,
+  библиотека и общий TOML остались байт-в-байт без изменений.
+* Архив исходников проверен на новые helper/docs и отсутствие .git/.build/.research/
+  .venv/node_modules. Готовые пакеты — локальные artifacts, не native runtime release.
+
+Новые тесты покрывают trusted mirror/pin/tree, реальные временные Git checkout,
+dirty/untracked source, LLVM tools и flags, отказ при плохом cache, восстановление
+без вызова dnf/acquire/build, SHA256SUMS/provenance, импорт schema 2 в слот,
+архитектуры чужих слоёв, неизменность HOME при passive CLI/RPC, изолированные child
+env/manifest/cache, тайм-аут, safe-update backup/stash и отказ при tracked .build
+в целевой ревизии. При проверке Windows найдено и исправлено декодирование Git
+UTF-8 путей с кириллицей; отдельные subprocess CLI используют согласованную UTF-8.
+
+ELF и compiler output в unit-тестах синтетические/mocked. Успешная упаковка fixture
+не выдаётся за новую ARM64-компиляцию. Реальный GitHub mirror загружен отдельно для
+проверки исторического commit/tree; чужой код не включён в plugin ZIP.
+
+### Что требует реального устройства
+
+Codex не выполнял SSH-установку, ARM64 configure/build, native CDLL или графические
+тесты на Thor. Сообщённые владельцем успешные сборка/CDLL/loader insertion и обычный
+cube отдельно зафиксированы в [протоколе](THOR_REAL_DEVICE_PROGRESS_RU.md).
+Новый путь recovery на существующем build-llvm, UI в реальном Decky, cube с LSFG,
+DLL/swapchain initialization и фактическая FG требуют проверки на устройстве.
+Hardware Verified остаётся false. Никакие чужие файлы на Thor не менялись.
+
+### GitHub Actions
+
+В workflow сохранены обе backend ОС и frontend, добавлены независимость builder/
+probe от site-packages и разбор PowerShell helper. Результат нового запуска будет
+добавлен после публикации PR; старые CI результаты ниже к этой ветке не относятся.
+
 ## Исправление HOME/XDG и CI — 2026-10-15
 
 Исходный commit: `161afd39e666f0e9bdb440feedc0d8a4c7b403f7`.

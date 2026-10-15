@@ -1,7 +1,10 @@
 {
   "historical": {
     "repository": "https://git.lsfg-vk.dev/lsfg-vk-archive.git",
+    "mirrors": ["https://github.com/eugeniosegala/lsfg-vk-experimental.git"],
+    "branch": "develop",
     "commit": "8b0da2661c6f3473a7fccc8ba643880050e71642",
+    "tree": "8e35469d1977b8640b44bb88f122a53f7f21eb41",
     "version": "v2.0.0-dev",
     "adapter": "historical-2dev",
     "license": "GPL-3.0-or-later",
@@ -9,7 +12,10 @@
   },
   "stable": {
     "repository": "https://git.lsfg-vk.dev/lsfg-vk.git",
+    "mirrors": [],
+    "branch": "master",
     "commit": "2333707d55b68ddd8066fd95404c3b7d07e00d3a",
+    "tree": "94f6e867400fca39e61bd0fefef83ff65aaac24d",
     "version": "2.0.0",
     "adapter": "stable-2.0",
     "license": "CC-BY-NC-ND-4.0",
